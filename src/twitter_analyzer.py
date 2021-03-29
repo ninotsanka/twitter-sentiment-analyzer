@@ -22,17 +22,28 @@ api = tweepy.API(auth)
 #     print(tweet.text)
 
 search_topics = 'cybersecurity'
-number_of_tweets = 15
+number_of_tweets = 10
 
-tweets = tweepy.Cursor(api.search, q=search_topics,
-                       lang='en').items(number_of_tweets)
+tweets = tweepy.Cursor(api.search,
+                       q=search_topics,
+                       lang='en',
+                       tweet_mode="extended").items(number_of_tweets)
 for tweet in tweets:
-    print(tweet.created_at)
-    print(tweet.text)
-    # print(tweet.place)
-    # print(tweet.source)
-    # print(tweet.geo)
-    print(tweet.metadata)
-    # print(tweet.truncated)
+    print(tweet.source_url)
+    print(tweet.full_text)
     # print(dir(tweet))
-    print("--------------------------")
+    if hasattr(tweet, "retweeted_status"):
+        print("RETWEET")
+        print(tweet.retweeted_status.full_text)
+    print("-------------------")
+    # clean_tweet = tweet.text.replace('RT', '')
+    # if clean_tweet.startswith(' @'):
+    #     position = clean_tweet.index(': ')
+    #     clean_tweet = clean_tweet[position + 2:]
+    # if clean_tweet.startswith('@'):
+    #     position = clean_tweet.index(' ')
+    #     clean_tweet = clean_tweet[position + 2:]
+    # if clean_tweet.startswith('#'):
+    #     position = clean_tweet.index(' ')
+    #     clean_tweet = clean_tweet[position + 2:]
+    # print(clean_tweet)
