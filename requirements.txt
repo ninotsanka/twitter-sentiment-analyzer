@@ -1,1 +1,5 @@
-
+python-dotenv
+textblob
+tweepy
+pylama
+yapf
