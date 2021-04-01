@@ -1,4 +1,4 @@
-# from textblob import TextBlob
+from textblob import TextBlob
 from dotenv import load_dotenv
 import tweepy
 # import sys
@@ -17,25 +17,29 @@ auth.set_access_token(access_token, access_token_secret)
 
 api = tweepy.API(auth)
 
-# tweets = api.home_timeline()
-# for tweet in tweets:
-#     print(tweet.text)
-
 search_topics = 'cybersecurity'
-number_of_tweets = 10
+number_of_tweets = 100
 
 tweets = tweepy.Cursor(api.search,
                        q=search_topics,
                        lang='en',
                        tweet_mode="extended").items(number_of_tweets)
 for tweet in tweets:
-    print(tweet.source_url)
-    print(tweet.full_text)
+    # print(tweet.source_url)
     # print(dir(tweet))
-    if hasattr(tweet, "retweeted_status"):
-        print("RETWEET")
-        print(tweet.retweeted_status.full_text)
-    print("-------------------")
+    if not hasattr(tweet, "retweeted_status"):
+        # print("RETWEET")
+        # print(tweet.retweeted_status.full_text)
+        # else:
+        print(tweet.full_text)
+
+        analysis = TextBlob(tweet.full_text)
+        print(analysis.sentiment)
+        print(analysis.polarity)
+        # polarity = analysis.polarity
+        print("-------------------")
+
+    # if polarity > 0
     # clean_tweet = tweet.text.replace('RT', '')
     # if clean_tweet.startswith(' @'):
     #     position = clean_tweet.index(': ')
