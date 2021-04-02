@@ -3,3 +3,5 @@ textblob
 tweepy
 pylama
 yapf
+pandas
+nltk
