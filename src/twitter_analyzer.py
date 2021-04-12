@@ -11,47 +11,64 @@ import os
 load_dotenv()
 lemmatizer = WordNetLemmatizer()
 
-api_key = os.getenv("API_KEY")
-api_sectret_key = os.getenv("API_SECRET_KEY")
-access_token = os.getenv("ACCESS_TOKEN")
-access_token_secret = os.getenv("ACCESS_TOKEN_SECRET")
+nltk.download('stopwords')
+nltk.download('wordnet')
+stop_words = stopwords.words('english')
 
-auth = tweepy.OAuthHandler(consumer_key=api_key,
-                           consumer_secret=api_sectret_key)
-auth.set_access_token(access_token, access_token_secret)
-api = tweepy.API(auth, wait_on_rate_limit=True)
-
+# search terms (topics)
 search_topics = ['privacy', 'trust']
 number_of_tweets = 100
 
-query = tweepy.Cursor(api.search,
-                      q=search_topics,
-                      lang='en',
-                      tweet_mode="extended").items(number_of_tweets)
+# search terms to identify the context of the tweets
+technology_context_keywords = ['tech', 'technology']
+policy_context_keywords = ['policy', 'legislature', 'law']
+government_context_keywords = ['government', 'administration', 'FBI']
 
-# create an empty list for tweets
-tweets = []
-for tweet in query:
-    # weed out retweets
-    if hasattr(tweet, "retweeted_status"):
-        # print(tweet.retweeted_status.full_text)
-        tweets.append({
-            'Tweet': tweet.retweeted_status.full_text,
-            'Timestamp': tweet.created_at
-        })
-    else:
-        tweets.append({
-            'Tweet': tweet.full_text,
-            'Timestamp': tweet.created_at
-        })
 
-df = pd.DataFrame.from_dict(tweets)
-# print(df.head())
-# print(df.shape)
+def initialize_api():
+    api_key = os.getenv('API_KEY')
+    api_sectret_key = os.getenv('API_SECRET_KEY')
+    access_token = os.getenv('ACCESS_TOKEN')
+    access_token_secret = os.getenv('ACCESS_TOKEN_SECRET')
 
-technology_context_keywords = ["tech", "technology"]
-policy_context_keywords = ["policy", "legislature", "law"]
-government_context_keywords = ["government", "administration", "FBI"]
+    # connect to Twitter using keys
+    auth = tweepy.OAuthHandler(consumer_key=api_key,
+                               consumer_secret=api_sectret_key)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth, wait_on_rate_limit=True)
+    return api
+
+
+def get_tweets():
+    # search the Twitter datasets using the search terms
+    api = initialize_api()
+    query = tweepy.Cursor(api.search,
+                          q=search_topics,
+                          lang='en',
+                          tweet_mode='extended').items(number_of_tweets)
+
+    # create an empty list for tweets
+    tweets = []
+    for tweet in query:
+        # weed out retweets
+        if hasattr(tweet, 'retweeted_status'):
+            # print(tweet.retweeted_status.full_text)
+            tweets.append({
+                'Tweet': tweet.retweeted_status.full_text,
+                'Timestamp': tweet.created_at
+            })
+        else:
+            # add tweets to the tweets list
+            tweets.append({
+                'Tweet': tweet.full_text,
+                'Timestamp': tweet.created_at
+            })
+
+    # create dataframe
+    df = pd.DataFrame.from_dict(tweets)
+    # remove duplicate tweets from the dataset
+    df.drop_duplicates(subset="Tweet", keep=False, inplace=True)
+    return df
 
 
 def identify_context(tweet: str, contexts: str) -> int:
@@ -62,18 +79,14 @@ def identify_context(tweet: str, contexts: str) -> int:
     return flag
 
 
-df['technology'] = df['Tweet'].apply(
-    lambda x: identify_context(x, technology_context_keywords))
-df['policy'] = df['Tweet'].apply(
-    lambda x: identify_context(x, policy_context_keywords))
-df['government'] = df['Tweet'].apply(
-    lambda x: identify_context(x, government_context_keywords))
-
-nltk.download('stopwords')
-nltk.download('wordnet')
-stop_words = stopwords.words('english')
-
-# print(stop_words)
+def context_filter(df):
+    df['technology'] = df['Tweet'].apply(
+        lambda x: identify_context(x, technology_context_keywords))
+    df['policy'] = df['Tweet'].apply(
+        lambda x: identify_context(x, policy_context_keywords))
+    df['government'] = df['Tweet'].apply(
+        lambda x: identify_context(x, government_context_keywords))
+    return df
 
 
 def preprocess_tweets(tweet):
@@ -86,15 +99,50 @@ def preprocess_tweets(tweet):
     return (preprocessed_tweet)
 
 
-df['Processed Tweet'] = df["Tweet"].apply(lambda x: preprocess_tweets(x))
+def clean_tweets(df):
+    df['Processed Tweet'] = df['Tweet'].apply(lambda x: preprocess_tweets(x))
+    return df
 
-df['polarity'] = df['Processed Tweet'].apply(
-    lambda x: TextBlob(x).sentiment.polarity)
-df['subjectivity'] = df['Processed Tweet'].apply(
-    lambda x: TextBlob(x).sentiment.subjectivity)
 
-print(df[df['technology'] == 1][['technology', 'polarity',
-                                 'subjectivity']].groupby('technology').agg(
+def get_polarity_subjectivity(df):
+    df['polarity'] = df['Processed Tweet'].apply(
+        lambda x: TextBlob(x).sentiment.polarity)
+    df['subjectivity'] = df['Processed Tweet'].apply(
+        lambda x: TextBlob(x).sentiment.subjectivity)
+
+    print(df.head())
+
+    print(df[df['technology'] == 1][[
+        'technology', 'polarity', 'subjectivity'
+    ]].groupby('technology').agg([np.mean, np.max, np.min, np.median]))
+    print(df[df['policy'] == 1][['policy', 'polarity',
+                                 'subjectivity']].groupby('policy').agg(
                                      [np.mean, np.max, np.min, np.median]))
+    print(df[df['government'] == 1][[
+        'government', 'polarity', 'subjectivity'
+    ]].groupby('government').agg([np.mean, np.max, np.min, np.median]))
 
-# print(df.head(50))
+    technology = df[df['technology'] == 1][['Timestamp', 'polarity']]
+    technology = technology.sort_values(by='Timestamp', ascending=True)
+    technology['Mean Average Polarity'] = technology.rolling(
+        10, min_periods=3).mean()
+
+    policy = df[df['policy'] == 1][['Timestamp', 'polarity']]
+    policy = policy.sort_values(by='Timestamp', ascending=True)
+    policy['Mean Average Polarity'] = policy.rolling(10, min_periods=3).mean()
+
+    government = df[df['government'] == 1][['Timestamp', 'polarity']]
+    government = government.sort_values(by='Timestamp', ascending=True)
+    government['Mean Average Polarity'] = government.rolling(
+        10, min_periods=3).mean()
+
+    print(technology)
+    print(policy)
+    print(government)
+
+
+if __name__ == "__main__":
+    raw_tweets = get_tweets()
+    filtered_tweets = context_filter(raw_tweets)
+    ready_tweets = clean_tweets(filtered_tweets)
+    get_polarity_subjectivity(ready_tweets)
