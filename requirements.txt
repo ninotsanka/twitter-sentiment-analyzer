@@ -5,3 +5,4 @@ pylama
 yapf
 pandas
 nltk
+plotly
