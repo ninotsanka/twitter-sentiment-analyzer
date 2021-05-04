@@ -19,11 +19,11 @@ nltk.download('stopwords')
 nltk.download('wordnet')
 stop_words = stopwords.words('english')
 
-# RUN_MODE = "Offline"
-RUN_MODE = "Online"
+RUN_MODE = "Offline"
+# RUN_MODE = "Online"
 
 OFFLINE_JSON_FILE = "data/offline_tweets_" + datetime.now().strftime(
-    "%H-%M-%S") + ".json"
+    "%Y-%m-%d_%H-%M-%S") + ".json"
 
 # search terms (topics)
 # search_topics = ['privacy', 'trust']
@@ -32,15 +32,21 @@ search_topics = [
     'dataprotection', 'hacking', 'infosec', 'tech', 'hacker', 'datasecurity',
     'cybercrime', 'dataprivacy', 'linux', 'data', 'gdpr',
     'informationsecurity', 'encryption', 'iot', 'cyber', 'internet',
-    'business', 'cyberattack', 'windowtint', 'protection', 'programming',
-    'vpn', 'hackers', 'malware'
+    'cyberattack', 'windowtint', 'protection', 'programming', 'vpn', 'hackers',
+    'malware'
 ]
-number_of_tweets = 10
+number_of_tweets = 50
 
 # search terms to identify the context of the tweets
-technology_context_keywords = ['tech', 'technology']
-policy_context_keywords = ['policy', 'legislature', 'law']
-government_context_keywords = ['government', 'administration', 'FBI']
+technology_context_keywords = [
+    'tech', 'technology', 'gadgets', 'android', 'smartphone', 'electronics',
+    'computer'
+]
+policy_context_keywords = [
+    'policy', 'legislature', 'law', 'election', 'judiciary', 'constitution',
+    'supremecourt'
+]
+government_context_keywords = ['government', 'administration', 'FBI', 'CIA']
 
 
 def initialize_api():
@@ -63,6 +69,7 @@ def get_tweets_online():
     # create an empty list for tweets
     tweets = []
     # https://docs.tweepy.org/en/latest/api.html?highlight=lang#tweepy.API.search
+    # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
     for search_topic in search_topics:
         search_key = search_topic
         # print(api.rate_limit_status())
@@ -186,7 +193,7 @@ def get_polarity_subjectivity(df):
     # print(df[df['government'] == 1][[
     #     'government', 'polarity', 'subjectivity'
     # ]].groupby('government').agg([np.mean, np.max, np.min, np.median]))
-    # Wrong number of items passed 2, placement implies 1
+
     technology = df[df['technology'] == 1][['Timestamp', 'polarity']]
     technology = technology.sort_values(by='Timestamp', ascending=True)
     polarity = technology.rolling(5, min_periods=2).mean()
@@ -221,17 +228,17 @@ def visualize_data(technology, policy, government):
         go.Scatter(x=technology['Timestamp'],
                    y=technology['Polarity'],
                    mode='lines',
-                   name='lines'))
+                   name='technology'))
     fig.add_trace(
         go.Scatter(x=policy['Timestamp'],
                    y=policy['Polarity'],
                    mode='lines',
-                   name='lines'))
+                   name='policy'))
     fig.add_trace(
         go.Scatter(x=government['Timestamp'],
                    y=government['Polarity'],
                    mode='lines',
-                   name='lines'))
+                   name='government'))
     fig.show()
 
 
