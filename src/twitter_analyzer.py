@@ -35,12 +35,12 @@ search_topics = [
     'cyberattack', 'windowtint', 'protection', 'programming', 'vpn', 'hackers',
     'malware'
 ]
-number_of_tweets = 50
+number_of_tweets = 100
 
 # search terms to identify the context of the tweets
 technology_context_keywords = [
     'tech', 'technology', 'gadgets', 'android', 'smartphone', 'electronics',
-    'computer'
+    'computer', 'apple', 'iphone', 'google', 'facebook', "windows"
 ]
 policy_context_keywords = [
     'policy', 'legislature', 'law', 'election', 'judiciary', 'constitution',
@@ -59,7 +59,9 @@ def initialize_api():
     auth = tweepy.OAuthHandler(consumer_key=api_key,
                                consumer_secret=api_sectret_key)
     auth.set_access_token(access_token, access_token_secret)
-    api = tweepy.API(auth, wait_on_rate_limit=True)
+    api = tweepy.API(auth,
+                     wait_on_rate_limit=True,
+                     wait_on_rate_limit_notify=True)
     return api
 
 
@@ -69,16 +71,18 @@ def get_tweets_online():
     # create an empty list for tweets
     tweets = []
     # https://docs.tweepy.org/en/latest/api.html?highlight=lang#tweepy.API.search
-    # https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
+    # https://developer.twitter.com/en/docs/twitter-api/rate-limits
     for search_topic in search_topics:
         search_key = search_topic
         # print(api.rate_limit_status())
         print(search_key)
-        query = tweepy.Cursor(api.search,
-                              q=search_key,
-                              lang='en',
-                              tweet_mode='extended',
-                              result_type='recent').items(number_of_tweets)
+        query = tweepy.Cursor(
+            api.search,
+            q=search_key,
+            lang='en',
+            #   until='2021-05-05',
+            tweet_mode='extended',
+            result_type='popular').items(number_of_tweets)
 
         for tweet in query:
             # weed out retweets
@@ -100,6 +104,7 @@ def get_tweets_online():
                     'Timestamp':
                     tweet.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 })
+        print("number of tweets:", len(tweets))
 
     # save tweets to csv file format for offline use
     # with open("data/offline_tweets.json", "w",
@@ -196,17 +201,17 @@ def get_polarity_subjectivity(df):
 
     technology = df[df['technology'] == 1][['Timestamp', 'polarity']]
     technology = technology.sort_values(by='Timestamp', ascending=True)
-    polarity = technology.rolling(5, min_periods=2).mean()
+    polarity = technology.rolling(10, min_periods=3).mean()
     technology['Polarity'] = polarity if len(polarity) > 0 else []
 
     policy = df[df['policy'] == 1][['Timestamp', 'polarity']]
     policy = policy.sort_values(by='Timestamp', ascending=True)
-    polarity = policy.rolling(5, min_periods=2).mean()
+    polarity = policy.rolling(10, min_periods=3).mean()
     policy['Polarity'] = polarity if len(polarity) > 0 else []
 
     government = df[df['government'] == 1][['Timestamp', 'polarity']]
     government = government.sort_values(by='Timestamp', ascending=True)
-    polarity = government.rolling(5, min_periods=2).mean()
+    polarity = government.rolling(10, min_periods=3).mean()
     government['Polarity'] = polarity if len(polarity) > 0 else []
 
     print("technology")
@@ -223,6 +228,9 @@ def get_polarity_subjectivity(df):
 
 
 def visualize_data(technology, policy, government):
+    # https://plotly.com/python/line-charts/
+    # https://plotly.com/python-api-reference/generated/plotly.graph_objects.Scatter.html
+    # https://plotly.com/python/line-and-scatter/
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(x=technology['Timestamp'],
@@ -239,6 +247,41 @@ def visualize_data(technology, policy, government):
                    y=government['Polarity'],
                    mode='lines',
                    name='government'))
+
+    fig.add_hline(y=0,
+                  line_dash="dot",
+                  annotation_text="Neutral",
+                  annotation_position="bottom right")
+
+    fig.add_hrect(y0=str(
+        max([
+            technology['Polarity'].max(), policy['Polarity'].max(),
+            government['Polarity'].max()
+        ]) + 0.03),
+                  y1="0",
+                  annotation_text="positive",
+                  annotation_position="top left",
+                  fillcolor="green",
+                  opacity=0.25,
+                  line_width=0)
+
+    fig.add_hrect(
+        y0="0",
+        y1=str(
+            min([
+                technology['Polarity'].min(), policy['Polarity'].min(),
+                government['Polarity'].min()
+            ]) - 0.03),
+        annotation_text="negative",
+        annotation_position="bottom left",
+        fillcolor="red",
+        opacity=0.25,
+        line_width=0)
+
+    fig.update_layout(title="Try Clicking on the Legend Items!",
+                      legend_title_text='Context',
+                      xaxis_title='Date',
+                      yaxis_title='Sentiment')
     fig.show()
 
 
