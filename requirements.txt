@@ -1,8 +1,7 @@
 python-dotenv
 textblob
 tweepy
-pylama
-yapf
 pandas
 nltk
 plotly
+numpy
