@@ -3,10 +3,10 @@
 ## What is it?
 
 The application to explore existing twitter datasets. Detect tweets related to privacy and computer
-security. Analyze tweets using sentiment analysis. Explore the relationship between the number of
-retweets and the tweet context and visualize the data.
+security. Analyze tweets using sentiment analysis and visualizes the data.
 
-![Display](assets\display.png)
+
+![Display](assets/display.png)
 
 ## Installation
 
