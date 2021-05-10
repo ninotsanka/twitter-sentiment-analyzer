@@ -6,6 +6,8 @@ The application to explore existing twitter datasets. Detect tweets related to p
 security. Analyze tweets using sentiment analysis. Explore the relationship between the number of
 retweets and the tweet context and visualize the data.
 
+![Display](assets\display.png)
+
 ## Installation
 
 ### Clone the repository:
