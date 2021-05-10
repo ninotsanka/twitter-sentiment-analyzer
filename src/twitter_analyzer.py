@@ -26,9 +26,10 @@ OFFLINE_JSON_FILE = (
     ".json"
 )
 
+NUMBER_OF_TWEETS = 100
+
 # search terms (topics)
-# search_topics = ['privacy', 'trust']
-search_topics = [
+SEARCH_TOPICS = [
     "privacy",
     "trust",
     "security",
@@ -58,10 +59,9 @@ search_topics = [
     "hackers",
     "malware",
 ]
-number_of_tweets = 100
 
 # search terms to identify the context of the tweets
-technology_context_keywords = [
+TECHNOLOGY_CONTEXT_KEYWORDS = [
     "tech",
     "technology",
     "gadgets",
@@ -75,7 +75,7 @@ technology_context_keywords = [
     "facebook",
     "windows",
 ]
-policy_context_keywords = [
+POLICY_CONTEXT_KEYWORDS = [
     "policy",
     "legislature",
     "law",
@@ -84,7 +84,7 @@ policy_context_keywords = [
     "constitution",
     "supremecourt",
 ]
-government_context_keywords = ["government", "administration", "FBI", "CIA"]
+GOVERNMENT_CONTEXT_KEYWORDS = ["government", "administration", "FBI", "CIA"]
 
 
 def initialize_api():
@@ -107,19 +107,16 @@ def get_tweets_online():
     api = initialize_api()
     # create an empty list for tweets
     tweets = []
-    # https://docs.tweepy.org/en/latest/api.html?highlight=lang#tweepy.API.search
-    # https://developer.twitter.com/en/docs/twitter-api/rate-limits
-    for search_topic in search_topics:
+    for search_topic in SEARCH_TOPICS:
         search_key = search_topic
         print(search_key)
         query = tweepy.Cursor(
             api.search,
             q=search_key,
             lang="en",
-            #   until='2021-05-05',
             tweet_mode="extended",
             result_type="popular",
-        ).items(number_of_tweets)
+        ).items(NUMBER_OF_TWEETS)
 
         for tweet in query:
             # weed out retweets
@@ -144,7 +141,6 @@ def get_tweets_online():
     df = pd.DataFrame.from_dict(tweets)
     # remove duplicate tweets from the dataset
     df.drop_duplicates(subset="Tweet", keep=False, inplace=True)
-
     # output dataframe for offline analysis
     df.to_json(OFFLINE_JSON_FILE, orient="records", force_ascii=False)
 
@@ -171,7 +167,7 @@ def get_tweets_offline():
     return df
 
 
-def identify_context(tweet: str, contexts: str) -> int:
+def identify_context(tweet, contexts):
     flag = 0
     for context in contexts:
         if tweet.find(context) != -1:
@@ -181,13 +177,13 @@ def identify_context(tweet: str, contexts: str) -> int:
 
 def context_filter(df):
     df["technology"] = df["Tweet"].apply(
-        lambda x: identify_context(x, technology_context_keywords)
+        lambda x: identify_context(x, TECHNOLOGY_CONTEXT_KEYWORDS)
     )
     df["policy"] = df["Tweet"].apply(
-        lambda x: identify_context(x, policy_context_keywords)
+        lambda x: identify_context(x, POLICY_CONTEXT_KEYWORDS)
     )
     df["government"] = df["Tweet"].apply(
-        lambda x: identify_context(x, government_context_keywords)
+        lambda x: identify_context(x, GOVERNMENT_CONTEXT_KEYWORDS)
     )
     return df
 
@@ -238,10 +234,6 @@ def get_polarity_subjectivity(df):
         .to_dict()
     )
 
-    # table_headers = ["context"]
-    # for key in technology_info.keys():
-    #     table_headers.append(str(key[0]) + ":" + str(key[1]))
-
     technology_stats = ["technology"]
     for value in technology_info.values():
         technology_stats.append(round(value[1], 2))
@@ -269,32 +261,14 @@ def get_polarity_subjectivity(df):
     polarity = government.rolling(10, min_periods=3).mean()
     government["Polarity"] = polarity if len(polarity) > 0 else []
 
-    # print("technology")
-    # print(technology['Timestamp'])
-    # print(technology['Polarity'])
-    # print("policy")
-    # print(policy['Timestamp'])
-    # print(policy['Polarity'])
-    # print("government")
-    # print(government['Timestamp'])
-    # print(government['Polarity'])
-
     return (
-        # table_headers,
         [technology, technology_stats],
         [policy, policy_stats],
         [government, government_stats],
     )
 
-# table_headers,
-
 
 def visualize_data(technology, policy, government):
-    # https://plotly.com/python/line-charts/
-    # https://plotly.com/python-api-reference/generated/plotly.graph_objects.Scatter.html
-    # https://plotly.com/python/line-and-scatter/
-    # http://www.colors.commutercreative.com/grid/
-
     fig = make_subplots(
         rows=2,
         cols=1,
@@ -370,38 +344,6 @@ def visualize_data(technology, policy, government):
         col=1,
     )
 
-    # fig.add_hline(y=0,
-    #               line_dash="dot",
-    #               annotation_text="Neutral",
-    #               annotation_position="bottom right",
-    #               row=2,
-    #               col=1)
-
-    # fig.add_hrect(y0=str(
-    #     max([
-    #         technology['Polarity'].max(), policy['Polarity'].max(),
-    #         government['Polarity'].max()
-    #     ]) + 0.03),
-    #               y1="0",
-    #               annotation_text="positive",
-    #               annotation_position="top left",
-    #               fillcolor="green",
-    #               opacity=0.25,
-    #               line_width=0)
-
-    # fig.add_hrect(
-    #     y0="0",
-    #     y1=str(
-    #         min([
-    #             technology['Polarity'].min(), policy['Polarity'].min(),
-    #             government['Polarity'].min()
-    #         ]) - 0.03),
-    #     annotation_text="negative",
-    #     annotation_position="bottom left",
-    #     fillcolor="red",
-    #     opacity=0.25,
-    #     line_width=0)
-
     fig.update_layout(
         title_text="Twitter Sentiment Analysis",
         title_font_color='rgb(29, 161, 242)',
@@ -423,7 +365,6 @@ if __name__ == "__main__":
     filtered_tweets = context_filter(raw_tweets)
     ready_tweets = clean_tweets(filtered_tweets)
 
-    # table_headers,
     technology, policy, government = get_polarity_subjectivity(
         ready_tweets
     )
