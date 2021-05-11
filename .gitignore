@@ -132,9 +132,9 @@ dmypy.json
 .vscode
 notes
 docs
+_build
 _templates
 _static
-_build
 conf.py
 index.rst
 make.bat
