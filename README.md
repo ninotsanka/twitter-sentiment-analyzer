@@ -8,6 +8,9 @@ security. Analyze tweets using sentiment analysis and visualizes the data.
 
 ![Display](assets/display.png)
 
+## Documentation
+Yuo can read documentation here: [documentation](https://ninotsanka.github.io/twitter-sentiment-analyzer.github.io/html/index.html)
+
 ## Installation
 
 ### Clone the repository:
