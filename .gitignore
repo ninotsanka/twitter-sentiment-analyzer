@@ -130,4 +130,12 @@ dmypy.json
 
 # Custome
 .vscode
+notes
 docs
+_templates
+_static
+_build
+conf.py
+index.rst
+make.bat
+Makefile
